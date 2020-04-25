@@ -1,0 +1,4 @@
+source "$BR2_EXTERNAL_66_PATH/package/oblibs/Config.in"
+source "$BR2_EXTERNAL_66_PATH/package/66-tools/Config.in"
+source "$BR2_EXTERNAL_66_PATH/package/boot-66serv/Config.in"
+source "$BR2_EXTERNAL_66_PATH/package/66/Config.in"

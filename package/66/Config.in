@@ -1,0 +1,15 @@
+config BR2_PACKAGE_66
+	bool "66"
+	depends on BR2_USE_MMU # execline
+	depends on BR2_USE_WCHAR
+	select BR2_PACKAGE_OBLIBS
+	select BR2_PACKAGE_S6_RC
+	help
+	  A collection of system tools built around s6 and s6-rc
+	  created to make the implementation and manipulation of
+	  service files on your machine easier.
+
+	  https://web.obarun.org/software/66/
+
+comment "66 needs a toolchain w/ wchar"
+	depends on !BR2_USE_WCHAR

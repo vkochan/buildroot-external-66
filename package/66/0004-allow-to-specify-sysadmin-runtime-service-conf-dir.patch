@@ -1,0 +1,213 @@
+From aef17253ae0a30de2e606e8bbec8cea9dac5a7ab Mon Sep 17 00:00:00 2001
+From: Vadym Kochan <vadim4j@gmail.com>
+Date: Sun, 26 Apr 2020 01:29:08 +0300
+Subject: [PATCH 4/4] allow to specify sysadmin runtime service conf dir
+
+In case of cross-compilation when build variant is used for preparing
+services db to used on target the --with-sysadmin-service-conf is used
+for parsing/writing service descriptor (frontend file) and for running
+on the target, but these path's may be different - one for
+parsing/writing services during the build, and different one
+(/etc/66/conf) which supposed to be used at runtime on the target.
+
+So, thats was the reason for adding new configure option which allows to
+specify the value which supposed to be used at runtime and particular
+for generating environment section of the service during the build
+stage.
+
+Signed-off-by: Vadym Kochan <vadim4j@gmail.com>
+---
+ configure                  | 14 ++++++++++++--
+ src/include/66/environ.h   |  1 +
+ src/include/66/parser.h    |  3 ++-
+ src/lib66/environ.c        | 16 ++++++++++++++++
+ src/lib66/parser_enabled.c |  9 +++++++++
+ src/lib66/parser_write.c   |  2 +-
+ 6 files changed, 41 insertions(+), 4 deletions(-)
+
+diff --git a/configure b/configure
+index e5b0e46..35d8d9a 100755
+--- a/configure
++++ b/configure
+@@ -38,6 +38,7 @@ Fine tuning of the installation directories:
+   
+   --with-sysadmin-service=DIR      sysadmin service frontend directory [SYSDIR/66/service]
+   --with-sysadmin-service-conf=DIR sysadmin service configuration file directory [SYSDIR/66/conf]
++  --with-sysadmin-runtime-conf=DIR sysadmin runtime configuration file directory [SYSDIR/66/conf]
+   
+   --with-user-dir=DIR              66 tools user working directory [.66]
+   --with-user-log=DIR              user service log directory [.66/log]
+@@ -178,6 +179,7 @@ s6log_user='root'
+ service_system='$datarootdir/66/service'
+ service_adm='$sysconfdir/66/service'
+ service_admconf='$sysconfdir/66/conf'
++service_admconf_rt='$sysconfdir/66/conf'
+ user_dir='.66'
+ service_user='.66/service'
+ service_userconf='.66/conf'
+@@ -224,6 +226,7 @@ for arg ; do
+     --with-system-service=*) service_system=${arg#*=} ;;
+     --with-sysadmin-service=*) service_adm=${arg#*=} ;;
+     --with-sysadmin-service-conf=*) service_admconf=${arg#*=} ;;
++    --with-sysadmin-runtime-conf=*) service_admconf_rt=${arg#*=} ;;
+     --with-user-dir=*) user_dir=${arg#*=} ;;
+     --with-user-service=*) service_user=${arg#*=} ;;
+     --with-user-service-conf=*) service_userconf=${arg#*=} ;;
+@@ -280,6 +283,9 @@ if test -z "$sysconfdir" ; then
+   if test "$service_admconf" = '$sysconfdir/66/conf' ; then
+ 	service_admconf = '$sysconfdir/66/conf'
+   fi
++  if test "$service_admconf_rt" = '$sysconfdir/66/conf' ; then
++	service_admconf_rt = '$sysconfdir/66/conf'
++  fi
+   if test "$skel" = '$sysconfdir/66' ; then
+ 	skel = '$sysconfdir/66'
+   fi
+@@ -289,7 +295,8 @@ fi
+ stripdir prefix
+ for i in exec_prefix dynlibdir libexecdir bindir libdir includedir sysconfdir \
+ 		datarootdir mandir shebangdir livedir skel system_dir system_log \
+-		service_system service_adm service_admconf sproot sysdeps ; do
++		service_system service_adm service_admconf service_admconf_rt \
++		sproot sysdeps ; do
+   eval tmp=\${$i}
+   eval $i=$tmp
+   stripdir $i
+@@ -303,7 +310,7 @@ for i in service_system mandir; do
+ done
+ 
+ stripdir sysconfdir
+-for i in service_adm service_admconf skel; do
++for i in service_adm service_admconf service_admconf_rt skel; do
+   eval tmp=\${$i}
+   eval $i=$tmp
+   stripdir $i
+@@ -347,6 +354,7 @@ if $slashpackage ; then
+   service_system=${home}/${service_system}
+   service_adm=${home}/${sysconfdir}/${service_adm}
+   service_admconf=${home}/${sysconfdir}/${service_admconf}
++  service_admconf_rt=${home}/${sysconfdir}/${service_admconf_rt}
+   if $shebangisdefault ; then
+     shebangdir=${extbinprefix}
+   fi
+@@ -508,6 +516,7 @@ s6log_user := $s6log_user
+ service_system := $service_system
+ service_adm := $service_adm
+ service_admconf := $service_admconf
++service_admconf_rt := $service_admconf_rt
+ user_dir := $user_dir
+ service_user := $service_user
+ service_userconf := $service_userconf
+@@ -586,6 +595,7 @@ All rights reserved.*/
+ #define ${package_macro_name}_SERVICE_SYSDIR "$service_system/"
+ #define ${package_macro_name}_SERVICE_ADMDIR "$service_adm/"
+ #define ${package_macro_name}_SERVICE_ADMCONFDIR "$service_admconf/"
++#define ${package_macro_name}_SERVICE_ADMCONFDIR_RT "$service_admconf_rt/"
+ 
+ /** Do not use absolute path but a \$HOME relative path
+  * The /home/name_of_user prefix will be automatically added to the pathname */
+diff --git a/src/include/66/environ.h b/src/include/66/environ.h
+index 6d2ed02..947a0ca 100644
+--- a/src/include/66/environ.h
++++ b/src/include/66/environ.h
+@@ -20,6 +20,7 @@
+ #include <skalibs/stralloc.h>
+ 
+ extern int env_resolve_conf(stralloc *env,uid_t owner) ;
++extern int env_resolve_conf_rt(stralloc *env,uid_t owner) ;
+ extern int env_merge_conf(char const *dst,char const *file,stralloc *srclist,stralloc *modifs,unsigned int force) ;
+ 
+ #endif
+diff --git a/src/include/66/parser.h b/src/include/66/parser.h
+index 1f966a7..bd16491 100644
+--- a/src/include/66/parser.h
++++ b/src/include/66/parser.h
+@@ -147,7 +147,8 @@ struct sv_alltype_s
+ 	 * process, the read process could be different if conf/sysadmin/service
+ 	 * exist */
+ 	uint32_t srconf ; 
+-						
++	/* path of the runtime environment file */
++	uint32_t srconf_rt ;
+ } ;
+ 
+ #define SV_EXEC_ZERO \
+diff --git a/src/lib66/environ.c b/src/lib66/environ.c
+index 4ff1f52..e630031 100644
+--- a/src/lib66/environ.c
++++ b/src/lib66/environ.c
+@@ -42,6 +42,22 @@ int env_resolve_conf(stralloc *env, uid_t owner)
+ 	return 1 ;
+ }
+ 
++int env_resolve_conf_rt(stralloc *env, uid_t owner)
++{
++	if (!owner)
++	{
++		if (!stralloc_cats(env,SS_SERVICE_ADMCONFDIR_RT)) return 0 ;
++	}
++	else
++	{
++		if (!set_ownerhome(env,owner)) return 0 ;
++		if (!stralloc_cats(env,SS_SERVICE_USERCONFDIR)) return 0 ;
++	}	
++	if (!stralloc_0(env)) return 0 ;
++	env->len-- ;
++	return 1 ;
++}
++
+ int env_merge_conf(char const *dst,char const *file,stralloc *srclist,stralloc *modifs,unsigned int force)
+ {
+ 	int r ;
+diff --git a/src/lib66/parser_enabled.c b/src/lib66/parser_enabled.c
+index 8a4467e..37ad73e 100644
+--- a/src/lib66/parser_enabled.c
++++ b/src/lib66/parser_enabled.c
+@@ -70,6 +70,7 @@ int parse_service_check_enabled(ssexec_t *info, char const *svname,uint8_t force
+ int parse_add_service(stralloc *parsed_list,sv_alltype *sv_before,char const *service,unsigned int *nbsv,uid_t owner)
+ {
+ 	stralloc conf = STRALLOC_ZERO ;
++	stralloc conf_rt = STRALLOC_ZERO ;
+ 	size_t svlen = strlen(service) ;
+ 	// keep source of the frontend file
+ 	sv_before->src = keep.len ;
+@@ -80,15 +81,23 @@ int parse_add_service(stralloc *parsed_list,sv_alltype *sv_before,char const *se
+ 		if (!env_resolve_conf(&conf,owner)) goto err ;
+ 		sv_before->srconf = keep.len ;
+ 		if (!stralloc_catb(&keep,conf.s,conf.len + 1)) goto err ;
++
++		// obtain runtime environment conf path
++		if (!env_resolve_conf_rt(&conf_rt,owner)) goto err ;
++		sv_before->srconf_rt = keep.len ;
++		if (!stralloc_catb(&keep,conf_rt.s,conf_rt.len + 1)) goto err ;
+ 	}
+ 	// keep service on current list
+ 	if (!stralloc_catb(parsed_list,service,svlen + 1)) goto err ;
+ 	if (!genalloc_append(sv_alltype,&gasv,sv_before)) goto err ;
+ 	(*nbsv)++ ;
+ 	stralloc_free(&conf) ;
++	stralloc_free(&conf_rt) ;
+ 	return 1 ;
+ 	err:
+ 		stralloc_free(&conf) ;
++		stralloc_free(&conf_rt) ;
++	return 1 ;
+ 		return 0 ;
+ }
+ 
+diff --git a/src/lib66/parser_write.c b/src/lib66/parser_write.c
+index 1935808..cfcb9ea 100644
+--- a/src/lib66/parser_write.c
++++ b/src/lib66/parser_write.c
+@@ -661,7 +661,7 @@ int write_exec(sv_alltype *sv, sv_exec *exec,char const *file,char const *dst,mo
+ 			if (sv->opts[2] && (exec->build == AUTO))
+ 			{
+ 				if (!stralloc_cats(&env,SS_BINPREFIX "execl-envfile ") ||
+-				!stralloc_cats(&env,keep.s + sv->srconf) || 
++				!stralloc_cats(&env,keep.s + sv->srconf_rt) || 
+ 				!stralloc_cats(&env,name) || 
+ 				!stralloc_cats(&env,"\n")) log_warnsys_return(LOG_EXIT_ZERO,"stralloc") ;
+ 			}
+-- 
+2.14.1
+

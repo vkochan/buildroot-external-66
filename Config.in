@@ -1,0 +1,6 @@
+config BR2_INIT_66
+	bool "66"
+	select BR2_PACKAGE_66
+	select BR2_PACKAGE_BOOT_66SERV
+
+source "$BR2_EXTERNAL_66_PATH/package/Config.in"

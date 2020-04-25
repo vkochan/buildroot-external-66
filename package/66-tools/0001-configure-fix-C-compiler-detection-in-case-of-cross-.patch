@@ -1,0 +1,31 @@
+From a43215492d489340df4c088be533ba6704d15703 Mon Sep 17 00:00:00 2001
+From: Vadym Kochan <vadim4j@gmail.com>
+Date: Sat, 25 Apr 2020 02:41:29 +0300
+Subject: [PATCH 1/2] configure: fix C compiler detection in case of
+ cross-compilation
+
+Use $CC_AUTO while generating the config.mak file,
+otherwise triplet name will be removed and left only
+gcc.
+
+Signed-off-by: Vadym Kochan <vadim4j@gmail.com>
+---
+ configure | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configure b/configure
+index da77563..0159356 100755
+--- a/configure
++++ b/configure
+@@ -427,7 +427,7 @@ SYSCLOCK_LIB := ${sysclock_lib}
+ TAINNOW_LIB := ${tainnow_lib}
+ TIMER_LIB := ${timer_lib}
+ UTIL_LIB := ${util_lib}
+-CC := ${CC_AUTO##${cross}}
++CC := $CC_AUTO
+ CPPFLAGS_AUTO := $CPPFLAGS_AUTO
+ CPPFLAGS := $CPPFLAGS $CPPFLAGS_POST
+ CFLAGS_AUTO := $CFLAGS_AUTO
+-- 
+2.14.1
+

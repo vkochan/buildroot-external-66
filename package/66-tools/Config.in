@@ -1,0 +1,9 @@
+config BR2_PACKAGE_66_TOOLS
+	bool "66"
+	depends on BR2_USE_MMU # execline
+	select BR2_PACKAGE_OBLIBS
+	help
+	  A collection of helpers tools to accomplish various
+	  and repetitive tasks in 66 service scripts.
+
+	  https://web.obarun.org/software/66-tools/

@@ -1,0 +1,8 @@
+config BR2_PACKAGE_OBLIBS
+	bool "oblibs"
+	depends on BR2_USE_MMU # execline
+	select BR2_PACKAGE_EXECLINE
+	help
+	  Obarun libraries.
+
+	  https://web.obarun.org/

@@ -1,0 +1,124 @@
+From b118b1ec7c10225bd21161b8f3d13f50ff8d6b75 Mon Sep 17 00:00:00 2001
+From: Vadym Kochan <vadim4j@gmail.com>
+Date: Wed, 22 Apr 2020 04:18:14 +0300
+Subject: [PATCH 1/4] replace basename,dirname by ob_basename, ob_dirname
+
+standart basename and dirname works bad with allocated arrays
+on the stack, replacing them by ob_xxx alternatives solves the issue.
+
+Signed-off-by: Vadym Kochan <vadim4j@gmail.com>
+---
+ src/66/66-intree.c             | 2 +-
+ src/66/66-parser.c             | 4 ++--
+ src/66/66-update.c             | 2 +-
+ src/extra-tools/66-umountall.c | 2 +-
+ src/lib66/parser_enabled.c     | 4 ++--
+ src/lib66/resolve.c            | 2 +-
+ src/lib66/ssexec_enable.c      | 2 +-
+ 7 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/src/66/66-intree.c b/src/66/66-intree.c
+index 26c5e20..216f5d4 100644
+--- a/src/66/66-intree.c
++++ b/src/66/66-intree.c
+@@ -190,7 +190,7 @@ static void info_display_current(char const *field,char const *treename)
+ 	if (tree_find_current(&sacurr,base.s,OWNER))
+ 	{
+ 		char name[sacurr.len + 1] ;//be paranoid +1
+-		if (!basename(name,sacurr.s)) log_dieu(LOG_EXIT_SYS,"basename of: ",sacurr.s) ;
++		if (!ob_basename(name,sacurr.s)) log_dieu(LOG_EXIT_SYS,"basename of: ",sacurr.s) ;
+ 		current = obstr_equal(treename,name) ;
+ 	}
+ 	if (NOFIELD) info_display_field_name(field) ;
+diff --git a/src/66/66-parser.c b/src/66/66-parser.c
+index 17da06c..53641f7 100644
+--- a/src/66/66-parser.c
++++ b/src/66/66-parser.c
+@@ -112,7 +112,7 @@ int main(int argc, char const *const *argv,char const *const *envp)
+ 	dir = argv[1] ;
+ 	if (dir[0] != '/') log_die(LOG_EXIT_USER, "directory: ",dir," must be an absolute path") ;
+ 	if (sv[0] != '/') log_die(LOG_EXIT_USER, "service: ",sv," must be an absolute path") ;
+-	if (!basename(name,sv)) log_dieu(LOG_EXIT_SYS,"set name");
++	if (!ob_basename(name,sv)) log_dieu(LOG_EXIT_SYS,"set name");
+ 	size_t svlen = strlen(sv) ;
+ 	size_t namelen = strlen(name) ;
+ 	char tmp[svlen + 1 + namelen + 1] ;
+@@ -125,7 +125,7 @@ int main(int argc, char const *const *argv,char const *const *envp)
+ 		tmp[svlen + 1 + namelen] = 0 ;
+ 		sv = tmp ;
+ 	}
+-	if (!dirname(srcdir,sv)) log_dieu(LOG_EXIT_SYS,"set directory name") ;
++	if (!ob_dirname(srcdir,sv)) log_dieu(LOG_EXIT_SYS,"set directory name") ;
+ 	check_dir(dir,force,0) ;
+ 	if (!stralloc_cats(&insta,name) ||
+ 	!stralloc_0(&insta)) log_die_nomem("stralloc") ;
+diff --git a/src/66/66-update.c b/src/66/66-update.c
+index cb7718b..6380b91 100644
+--- a/src/66/66-update.c
++++ b/src/66/66-update.c
+@@ -81,7 +81,7 @@ int tree_is_current(char const *base,char const *treename,uid_t owner)
+ 	if (tree_find_current(&sacurr,base,owner))
+ 	{
+ 		char name[sacurr.len + 1] ;
+-		if (!basename(name,sacurr.s)) log_dieu_nclean(LOG_EXIT_SYS,&cleanup,"basename of: ",sacurr.s) ;
++		if (!ob_basename(name,sacurr.s)) log_dieu_nclean(LOG_EXIT_SYS,&cleanup,"basename of: ",sacurr.s) ;
+ 		current = obstr_equal(treename,name) ;
+ 	}
+ 	stralloc_free(&sacurr) ;
+diff --git a/src/extra-tools/66-umountall.c b/src/extra-tools/66-umountall.c
+index 3ab7c92..0336d35 100644
+--- a/src/extra-tools/66-umountall.c
++++ b/src/extra-tools/66-umountall.c
+@@ -40,7 +40,7 @@ int main (int argc, char const *const *argv)
+ {
+ 	size_t mountpoints[MAXLINES], tmplen = strlen(SS_LIVE), len = 0 ;
+ 	char tmpdir[tmplen + 1] ;
+-	dirname(tmpdir,SS_LIVE) ;
++	ob_dirname(tmpdir,SS_LIVE) ;
+ 	len = strlen(tmpdir) ;
+ 	if (tmpdir[len-1] == '/')
+ 		tmpdir[len-1] = 0 ;
+diff --git a/src/lib66/parser_enabled.c b/src/lib66/parser_enabled.c
+index 65acab9..8a4467e 100644
+--- a/src/lib66/parser_enabled.c
++++ b/src/lib66/parser_enabled.c
+@@ -218,8 +218,8 @@ int parse_service_before(ssexec_t *info,stralloc *parsed_list,stralloc *tree_lis
+ 	int r, insta ;
+ 	size_t svlen = strlen(sv), svsrclen, svnamelen ;
+ 	char svname[svlen + 1], svsrc[svlen + 1] ; 
+-	if (!basename(svname,sv)) return 0 ;
+-	if (!dirname(svsrc,sv)) return 0 ;
++	if (!ob_basename(svname,sv)) return 0 ;
++	if (!ob_dirname(svsrc,sv)) return 0 ;
+ 	svsrclen = strlen(svsrc) ;
+ 	svnamelen = strlen(svname) ;
+ 	char svpath[svsrclen + svnamelen + 1] ;
+diff --git a/src/lib66/resolve.c b/src/lib66/resolve.c
+index e45584e..632529e 100644
+--- a/src/lib66/resolve.c
++++ b/src/lib66/resolve.c
+@@ -163,7 +163,7 @@ int ss_resolve_service_isdir(char const *dir, char const *name)
+ 	memcpy(t + dirlen + 1, name, namelen) ;
+ 	t[dirlen + 1 + namelen] = 0 ;
+ 	int r = scan_mode(t,S_IFREG) ;
+-	if (!basename(t,dir)) return -1 ;
++	if (!ob_basename(t,dir)) return -1 ;
+ 	if (!strcmp(t,name) && r) return 1 ;
+ 	return 0 ;
+ }
+diff --git a/src/lib66/ssexec_enable.c b/src/lib66/ssexec_enable.c
+index 7de0eb2..445b85e 100644
+--- a/src/lib66/ssexec_enable.c
++++ b/src/lib66/ssexec_enable.c
+@@ -72,7 +72,7 @@ void start_parser(stralloc *list,ssexec_t *info, unsigned int *nbsv,uint8_t FORC
+ 		char *name = list->s+i ;
+ 		size_t namelen = strlen(name) ;
+ 		char svname[namelen + 1] ;
+-		if (!basename(svname,name)) log_dieusys(LOG_EXIT_SYS,"get basename of: ", svname) ;
++		if (!ob_basename(svname,name)) log_dieusys(LOG_EXIT_SYS,"get basename of: ", svname) ;
+ 		r = parse_service_check_enabled(info,svname,FORCE,&exist) ;
+ 		if (!r) log_dieu(LOG_EXIT_SYS,"check enabled service: ",svname) ;
+ 		if (r == 2) continue ;
+-- 
+2.14.1
+

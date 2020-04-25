@@ -1,0 +1,8 @@
+[main]
+@type = classic
+@description = "Launch tty"
+@user = ( root )
+
+[start]
+@build = auto
+@execute =
