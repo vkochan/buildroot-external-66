@@ -13,8 +13,6 @@
 
 66_CONF_OPTS = \
 	--prefix=/usr \
-	--build=$(GNU_HOST_NAME) \
-	--host=$(GNU_TARGET_NAME) \
 	--with-sysdeps=$(STAGING_DIR)/usr/lib/skalibs/sysdeps \
 	$(if $(BR2_STATIC_LIBS),,--disable-allstatic) \
 	$(SHARED_STATIC_LIBS_OPTS)
