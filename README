@@ -1,0 +1,10 @@
+This is an experimental Buildroot external project with
+support 66 as init system to use it in embedded projects.
+
+Currently tested on QEMU systems.
+
+HOWTO
+-----
+# make qemu_x86_64_defconfig
+# make O=output/qemu_x86_64
+# ./board/qemu/x86_64/run_qemu.sh output/qemu_x86_64
