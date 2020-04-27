@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-OBLIBS_VERSION = v0.0.6.0
+OBLIBS_VERSION = v0.0.6.1
 OBLIBS_SITE = https://framagit.org/Obarun/oblibs.git
 OBLIBS_SITE_METHOD = git
 OBLIBS_LICENSE = ISC
