@@ -1,0 +1,153 @@
+From 75d7deb30d77afe8b415e49b2737cec02632619a Mon Sep 17 00:00:00 2001
+From: Vadym Kochan <vadim4j@gmail.com>
+Date: Tue, 28 Apr 2020 01:27:11 +0300
+Subject: [PATCH] service/boot: fix services with env variables which contains
+ '='
+
+This strange issues was observed runnig on QEMU with compiled for
+ARM and ARM64 platforms (but not on x86_64). The issue was that
+environ_get_val() func from oblibs stucks when '=' present as value in
+[environment] section.
+
+Temporary fixed by using options right in-place w/o keeping it in
+environment variable.
+
+Signed-off-by: Vadym Kochan <vadim4j@gmail.com>
+---
+ service/boot/mount/mount-dev    | 6 +-----
+ service/boot/mount/mount-pts    | 6 +-----
+ service/boot/mount/mount-run    | 6 +-----
+ service/boot/mount/mount-shm    | 6 +-----
+ service/boot/system/system-fsck | 5 ++---
+ 5 files changed, 6 insertions(+), 23 deletions(-)
+
+diff --git a/service/boot/mount/mount-dev b/service/boot/mount/mount-dev
+index 32a3409..632c575 100644
+--- a/service/boot/mount/mount-dev
++++ b/service/boot/mount/mount-dev
+@@ -1,7 +1,6 @@
+ [main]
+ @type = oneshot
+ @description = "Mount /dev directory"
+-@options = ( env )
+ @user = ( root )
+ @depends = ( mount-sys )
+ 
+@@ -12,10 +11,7 @@
+ 	if -tn { mountpoint -q /dev }
+ 	foreground {
+ 		if { 66-echo -- [mount-dev] starts... } 
+-		if { execl-cmdline -s { s6-mount ${cmd_args} } } 
++		if { execl-cmdline -s { s6-mount -o mode=0755,nosuid -t devtmpfs dev /dev } } 
+ 		66-echo -- [mount-dev] started successfully
+ 	}
+ )
+-
+-[environment]
+-cmd_args=!-o mode=0755,nosuid -t devtmpfs dev /dev
+diff --git a/service/boot/mount/mount-pts b/service/boot/mount/mount-pts
+index fee6cf6..87480d5 100644
+--- a/service/boot/mount/mount-pts
++++ b/service/boot/mount/mount-pts
+@@ -1,7 +1,6 @@
+ [main]
+ @type = oneshot
+ @description = "Mount /dev/pts directory"
+-@options = ( env )
+ @user = ( root )
+ @depends =( mount-dev )
+ 
+@@ -17,7 +16,7 @@
+ 	}
+ 	foreground {
+ 		if -tn { mountpoint -q /dev/pts }
+-		execl-cmdline -s { s6-mount ${cmd_args} }
++		execl-cmdline -s { s6-mount -o mode=0620,gid=5,nosuid,noexec -t devpts devpts /dev/pts }
+ 	}
+ 	66-echo -- [mount-pts] started successfully
+ )
+@@ -33,6 +32,3 @@
+ 		66-echo -- [mount-pts] stopped successfully
+ 	}
+ )
+-
+-[environment]
+-cmd_args=!-o mode=0620,gid=5,nosuid,noexec -t devpts devpts /dev/pts
+diff --git a/service/boot/mount/mount-run b/service/boot/mount/mount-run
+index d622ca5..9f96c50 100644
+--- a/service/boot/mount/mount-run
++++ b/service/boot/mount/mount-run
+@@ -1,7 +1,6 @@
+ [main]
+ @type = oneshot
+ @description = "Mount /run directory"
+-@options = ( env )
+ @user = ( root )
+ 
+ [start]
+@@ -11,10 +10,7 @@
+ 	if -tn { mountpoint -q /run }
+ 	foreground {
+ 		if { 66-echo -- [mount-run] starts... } 
+-		if { execl-cmdline -s { s6-mount ${cmd_args} } } 
++		if { execl-cmdline -s { s6-mount -o mode=0755,nosuid,nodev -t tmpfs run /run } } 
+ 		66-echo -- [mount-run] started successfully
+ 	}
+ )
+-
+-[environment]
+-cmd_args=!-o mode=0755,nosuid,nodev -t tmpfs run /run
+diff --git a/service/boot/mount/mount-shm b/service/boot/mount/mount-shm
+index 397449f..7204405 100644
+--- a/service/boot/mount/mount-shm
++++ b/service/boot/mount/mount-shm
+@@ -1,7 +1,6 @@
+ [main]
+ @type = oneshot
+ @description = "Mount /dev/shm directory"
+-@options = ( env )
+ @user = ( root )
+ @depends =( mount-dev )
+ 
+@@ -17,7 +16,7 @@
+ 	}
+ 	foreground {
+ 		if -tn { mountpoint -q /dev/shm } 
+-		execl-cmdline -s { s6-mount ${cmd_args} } 
++		execl-cmdline -s { s6-mount -o mode=1777,nosuid,nodev -t tmpfs shm /dev/shm } 
+ 	}   
+ 	66-echo -- [mount-shm] started successfully 
+ )
+@@ -33,6 +32,3 @@
+ 		66-echo -- [mount-shm] stopped successfully
+ 	}
+ )
+-
+-[environment]
+-cmd_args=!-o mode=1777,nosuid,nodev -t tmpfs shm /dev/shm
+diff --git a/service/boot/system/system-fsck b/service/boot/system/system-fsck
+index 8c52acf..aed0a54 100644
+--- a/service/boot/system/system-fsck
++++ b/service/boot/system/system-fsck
+@@ -14,10 +14,10 @@
+ 	{
+ 		redirfd -w 1 /dev/console
+ 		if { 66-echo -- [system-fsck] FORCECHCK was asked... }
+-		execl-cmdline -s { fsck -f ${cmd_args} }
++		execl-cmdline -s { fsck -f -A -T -a noopts=_netdev }
+ 	}
+ 	if { 66-echo -- [system-fsck] starts... }
+-	foreground { execl-cmdline -s { fsck ${cmd_args} } }
++	foreground { execl-cmdline -s { fsck -A -T -a noopts=_netdev } }
+ 	importas ? ?
+ 	ifelse { test $? -gt 1 }
+ 	{ 
+@@ -30,5 +30,4 @@
+ )
+ 
+ [environment]
+-cmd_args=!-A -T -a noopts=_netdev
+ conf_file=!@BOOTCONF@
+-- 
+2.14.1
+
