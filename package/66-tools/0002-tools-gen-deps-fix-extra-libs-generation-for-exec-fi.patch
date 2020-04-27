@@ -1,0 +1,26 @@
+From 2720d9aec5216d930371a7b4e7fe11f4d6bb67e8 Mon Sep 17 00:00:00 2001
+From: Vadym Kochan <vadim4j@gmail.com>
+Date: Mon, 27 Apr 2020 05:37:25 +0300
+Subject: [PATCH] tools/gen-deps: fix extra libs generation for exec files
+
+Signed-off-by: Vadym Kochan <vadim4j@gmail.com>
+---
+ tools/gen-deps.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/gen-deps.sh b/tools/gen-deps.sh
+index 6383ac2..27e5b3e 100755
+--- a/tools/gen-deps.sh
++++ b/tools/gen-deps.sh
+@@ -81,7 +81,7 @@ for dir in $(ls -1 src | grep -v ^include) ; do
+       if echo $dep | grep -q -- \\.o$ ; then
+         dep="src/$dir/$dep"
+       fi
+-      if echo $dep | grep -q -- '^\${.*_LIB}' ; then
++      if echo $dep | grep -q -e ^-l -e '^\${.*_LIB}' ; then
+         libs="$libs $dep"
+       else
+         deps="$deps $dep"
+-- 
+2.14.1
+

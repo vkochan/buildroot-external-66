@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-66_TOOLS_VERSION = v0.0.3.1
+66_TOOLS_VERSION = v0.0.4.0
 66_TOOLS_SITE = https://framagit.org/Obarun/66-tools.git
 66_TOOLS_SITE_METHOD = git
 66_TOOLS_LICENSE = ISC
