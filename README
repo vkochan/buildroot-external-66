@@ -5,6 +5,6 @@ Currently tested on QEMU systems.
 
 HOWTO
 -----
-# make qemu_x86_64_defconfig
-# make O=output/qemu_x86_64
+# make BR2_PATH=PATH_TO_BUILDROOT qemu_x86_64_defconfig
+# make BR2_PATH=PATH_TO_BUILDROOT O=output/qemu_x86_64
 # ./board/qemu/x86_64/run_qemu.sh output/qemu_x86_64
