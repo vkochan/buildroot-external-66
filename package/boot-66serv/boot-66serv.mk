@@ -11,7 +11,12 @@ BOOT_66SERV_LICENSE = ISC
 BOOT_66SERV_LICENSE_FILES = LICENSE
 BOOT_66SERV_DEPENDENCIES = host-66
 
-BOOT_66SERV_CONF_OPTS = --prefix=/usr --bindir=/bin
+BOOT_66SERV_SVC_DIR = /etc/66/service
+
+BOOT_66SERV_CONF_OPTS = \
+	--prefix=/usr \
+	--bindir=/bin \
+	--with-system-service=$(BOOT_66SERV_SVC_DIR)
 
 define BOOT_66SERV_CONFIGURE_CMDS
 	(cd $(@D); \
@@ -19,7 +24,7 @@ define BOOT_66SERV_CONFIGURE_CMDS
 	)
 endef
 
-BOOT_66SERV_SERVICES_DIR = $(TARGET_DIR)/usr/share/66/service/boot
+BOOT_66SERV_SERVICES_DIR = $(TARGET_DIR)/$(BOOT_66SERV_SVC_DIR)/boot
 
 ifeq ($(BR2_PACKAGE_IPTABLES),)
 
@@ -94,16 +99,16 @@ define BOOT_66SERV_INSTALL_TARGET_CMDS
 
 	rm -f $(BOOT_66SERV_SERVICES_DIR)/earlier-service/tty12
 	cp $(BOOT_66SERV_PKGDIR)/66tty \
-		$(TARGET_DIR)/usr/share/66/service/boot/tty
+		$(BOOT_66SERV_SERVICES_DIR)/tty
 endef
 
 ifeq ($(BR2_TARGET_GENERIC_GETTY),y)
 define BOOT_66SERV_SET_GETTY
-	echo '( getty -L $(SYSTEM_GETTY_OPTIONS) $(SYSTEM_GETTY_PORT) $(SYSTEM_GETTY_BAUDRATE) $(SYSTEM_GETTY_TERM) )' >> $(TARGET_DIR)/usr/share/66/service/boot/tty
+	echo '( getty -L $(SYSTEM_GETTY_OPTIONS) $(SYSTEM_GETTY_PORT) $(SYSTEM_GETTY_BAUDRATE) $(SYSTEM_GETTY_TERM) )' >> $(BOOT_66SERV_SERVICES_DIR)/tty
 endef
 else
 define BOOT_66SERV_SET_GETTY
-	echo '( getty -L ttyS0 115200 vt100 )' >> $(TARGET_DIR)/usr/share/66/service/boot/tty
+	echo '( getty -L ttyS0 115200 vt100 )' >> $(BOOT_66SERV_SERVICES_DIR)/tty
 endef
 endif # BR2_TARGET_GENERIC_GETTY
 BOOT_66SERV_TARGET_FINALIZE_HOOKS += BOOT_66SERV_SET_GETTY
